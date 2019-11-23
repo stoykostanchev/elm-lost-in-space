@@ -17,11 +17,26 @@ validateInputTest =
                   1 1
                   1 2 E
                   RL
+
+                  3 2 N
+                  FRRL
                   """)
                   (Ok
                     ((Mars { x = 1, y = 1 } { x = 0, y = 0 } []),
-                    ["1 2 E", "RL"]))
-        , test "Correct parsing of a single robot" <|
+                    ["1 2 E", "RL", "", "3 2 N", "FRRL"]))
+        , test "Correct robot parsing" <|
+            \_ ->
+                Expect.equal
+                    (parseRobots ["1 2 E", "RL", "", "3 2 N", "FRRL"])
+                    [(
+                        (Robot { x = 1, y = 2 } E),
+                        [ R, L ]
+                    ),
+                    (
+                        (Robot { x = 3, y = 2 } N),
+                        [ F, R, R, L]
+                    )]
+        , test "Correct e2e parsing of a single robot" <|
             \_ ->
                 Expect.equal
                   (Ok (ValidInput
@@ -35,6 +50,28 @@ validateInputTest =
                   5 3
                   1 2 E
                   RLF
+                  """)
+        , test "Correct e2e parsing of multiple robots" <|
+            \_ ->
+                Expect.equal
+                  (Ok (ValidInput
+                    (Mars { x = 5, y = 3 } { x = 0, y = 0 } [])
+                    [(
+                        (Robot { x = 1, y = 2 } E),
+                        [ R, L, F ]
+                    ),
+                    (
+                        (Robot { x = 3, y = 5 } N),
+                        [ L, L, L ]
+                    )])
+                  )
+                  (validateInput """
+                  5 3
+                  1 2 E
+                  RLF
+
+                  3 5 N
+                  LLL
                   """)
 
         ]

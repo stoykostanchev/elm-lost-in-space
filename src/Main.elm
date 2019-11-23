@@ -7,6 +7,7 @@ import Html exposing (Html, text, div, h1, img, input, p, textarea)
 import Html.Attributes exposing (..)
 import Array exposing (initialize, toList, length)
 import List.Extra exposing (..)
+import Result.Extra exposing (..)
 import Html.Events exposing (onInput)
 import Debug exposing (log)
 
@@ -24,7 +25,7 @@ type MovedRobot = Lost Robot | Present Robot
 type alias MarsTopRight = Coord
 type alias MarsBottomLeft = Coord
 type Mars = Mars MarsTopRight MarsBottomLeft (List MovedRobot)
-type Instruction = L | R | F
+type Instruction = L | R | F | Unknown
 type alias ParseError = String
 type ValidInput = ValidInput Mars (List (Robot, List Instruction))
 type alias Input = Result ParseError ValidInput
@@ -64,12 +65,70 @@ parseMars rawS =
         Err "Please have the first line as 'A B' where A and B are numbers"
         
 
+type alias RawPosition = String
+type alias RawInstructions = String
+
+letterToInstr : String -> Result ParseError Instruction
+letterToInstr l =
+    case l of
+        "L" -> Ok L
+        "R" -> Ok R
+        "F" -> Ok F
+        _ -> Err (concat ["Unknown command ",l])
+
+letterToOrientation : String -> Result ParseError Orientation
+letterToOrientation l =
+    case l of
+        "E" -> Ok E
+        "W" -> Ok W
+        "S" -> Ok S
+        "N" -> Ok N
+        _ -> Err (concat ["Unknown orientation ", l])
+
+parseRobot : RawPosition -> RawInstructions -> Result ParseError (Robot, List Instruction)
+parseRobot p instr =
+    let
+        coord = split " " p
+        instructions = List.map letterToInstr (split "" instr)
+    in case coord of
+        x::y::[c] -> if (List.all isOk instructions) then
+            case letterToOrientation c of
+                Err e -> Err e
+                Ok orient -> Ok (
+                    (Robot
+                        { x = (Maybe.withDefault 0 (String.toInt x)),
+                        y = (Maybe.withDefault 0 (String.toInt y)) } -- TODO: Proper err handling
+                        orient),
+                    (List.map (extract (\_ -> Unknown)) instructions))
+            else
+                Err (concat ["Some instructions were invalid in ", instr])
+        _ -> Err (concat ["Unable to parse a robot from ", p])
+
+
+parseRobotsR: List String -> List (Robot, List Instruction) -> List (Robot, List Instruction)
+parseRobotsR str rs = case str of
+    [] -> rs 
+    [x] -> rs -- TODO: spit out error here instead 
+    pos::instr::rest -> case parseRobot pos instr of
+        Ok robotAndInstructions -> parseRobotsR rest (rs ++ [robotAndInstructions])
+        Err e -> rs
+
+
+parseRobots: List String -> List (Robot, List Instruction)
+parseRobots strs =
+    let
+        nonEmpty = List.filter (\el -> not ( String.isEmpty el )) strs
+    in
+        parseRobotsR nonEmpty []
+
 validateInput : String -> Input
 validateInput s = case parseMars s of
     Err err -> Err err
     Ok (mars, otherLines) ->
-       Ok (ValidInput mars [])
+       Ok (ValidInput mars (parseRobots otherLines))
 
+-- type ValidInput = ValidInput Mars (List (Robot, List Instruction))
+-- type alias Input = Result ParseError ValidInput
 type alias Model = {
     rawInput: String,
     input: Input
