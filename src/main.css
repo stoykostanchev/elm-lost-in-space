@@ -30,5 +30,7 @@ img {
 }
 
 input {
+  height: 100px;
+  width: 50%;
   margin: 30px;
 }

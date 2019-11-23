@@ -2,9 +2,11 @@ module Main exposing (..)
 
 import Browser
 import String exposing ( fromInt, concat )
-import Html exposing (Html, text, div, h1, img, input, p)
+import Html exposing (Html, text, div, h1, img, input, p, textarea)
 import Html.Attributes exposing (..)
-import Array exposing (..)
+import Array exposing (initialize, toList)
+import Html.Events exposing (onInput)
+
 
 ---- MODEL ----
 
@@ -52,12 +54,12 @@ init = ({
 
 
 type Msg
-    = NoOp
+    = NewInput String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update _ model =
-    ( model, Cmd.none )
+update msg model = case msg of
+    NewInput str -> ( { model | rawInput = str, input = validateInput str }, Cmd.none )
 
 
 ---- VIEW ----
@@ -90,18 +92,17 @@ getMars (Mars tr bl _) = div[
        List.map (getMarsLine tr.x) (toList (initialize tr.x identity))
     )
     
--- Mars MarsTopRight MarsBottomLeft (List MovedRobot)
-
 getForm : Model -> Html Msg
-getForm model = case model.input of
-    Error e ->
-        div [] [
-            input [ placeholder "Input goes here", value model.rawInput ] [],
-            p [] [text e]
-        ]
+getForm model = div [] [
+    input [ value model.rawInput ] [],
 
-    Valid validInput ->
-        input [ value model.rawInput ] []
+    (case model.input of
+        Error e ->
+            div [] [text e]
+
+        Valid validInput ->
+            text ""
+    )]
 
 view : Model -> Html Msg
 view model =
