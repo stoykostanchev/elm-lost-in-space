@@ -2,6 +2,7 @@ module Main exposing (..)
 
 import Browser
 import String exposing ( fromInt, concat, split, toInt, trim )
+import String.Extra exposing (..)
 import Html exposing (Html, text, div, h1, img, input, p, textarea)
 import Html.Attributes exposing (..)
 import Array exposing (initialize, toList, length)
@@ -33,9 +34,10 @@ move m r ins = m
 
 -- validate and parse Mars, return the remainder of the string as a remainder of the tuple
 parseMars : String -> Result ParseError (Mars, List String)
-parseMars s =
+parseMars rawS =
     let
-        list = split "\n" s
+        s = trim rawS
+        list = List.map trim (split "\n" s)
         x = List.head list
         firstLine = List.filter (\l -> l /= "")  (split " " (Maybe.withDefault "" x))
     in
