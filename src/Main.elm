@@ -1,11 +1,14 @@
 module Main exposing (..)
 
 import Browser
-import String exposing ( fromInt, concat )
+import String exposing ( fromInt, concat, split, toInt, trim )
 import Html exposing (Html, text, div, h1, img, input, p, textarea)
 import Html.Attributes exposing (..)
-import Array exposing (initialize, toList)
+import Array exposing (initialize, toList, length)
+import List.Extra exposing (..)
 import Html.Events exposing (onInput)
+import Debug exposing (log)
+
 
 
 ---- MODEL ----
@@ -21,20 +24,49 @@ type alias MarsTopRight = Coord
 type alias MarsBottomLeft = Coord
 type Mars = Mars MarsTopRight MarsBottomLeft (List MovedRobot)
 type Instruction = L | R | F
-type ValidInput = ValidInput Mars (List Instruction)
-type Input = Error String | Valid ValidInput
+type alias ParseError = String
+type ValidInput = ValidInput Mars (List (Robot, List Instruction))
+type alias Input = Result ParseError ValidInput
 
 move : Mars -> MovedRobot -> Instruction -> Mars
 move m r ins = m
 
+-- validate and parse Mars, return the remainder of the string as a remainder of the tuple
+parseMars : String -> Result ParseError (Mars, List String)
+parseMars s =
+    let
+        list = split "\n" s
+        x = List.head list
+        firstLine = List.filter (\l -> l /= "")  (split " " (Maybe.withDefault "" x))
+    in
+    if (List.length firstLine) == 2 then
+        let
+            coordX = List.head firstLine
+            coordY = last firstLine
+        in
+            case (coordX, coordY) of
+            (Just a, Just b) ->
+                let
+                    xInt = toInt a
+                    yInt = toInt b
+                in
+                case (xInt, yInt) of
+                    (Just xi, Just yi) ->
+                        Ok (
+                            (Mars { x = xi, y = yi } { x = 0, y = 0} []),
+                            (Maybe.withDefault [] (List.tail list))
+                        )
+                    _ -> Err "Unable to parse map corner coordinates as numbers"
+            _ -> Err "Unable to extract two coordinates from the first line"
+    else
+        Err "Please have the first line as 'A B' where A and B are numbers"
+        
+
 validateInput : String -> Input
-validateInput s = Valid (ValidInput
-    (Mars
-        {x = 5, y = 5 }
-        {x = 0, y = 0 }
-        []
-        )
-    [])
+validateInput s = case parseMars s of
+    Err err -> Err err
+    Ok (mars, otherLines) ->
+       Ok (ValidInput mars [])
 
 type alias Model = {
     rawInput: String,
@@ -76,7 +108,7 @@ getMarsLine sqCount _ = div [
     style "width" "100%",
     style "display" "flex",
     style "flex-flow" "row wrap"
-    ] (List.map (getMarsSquare sqCount) (toList (initialize sqCount identity)))
+    ] (List.map (getMarsSquare sqCount) (toList (Array.initialize sqCount identity)))
 
 getMars : Mars -> Html msg
 getMars (Mars tr bl _) = div[
@@ -89,18 +121,18 @@ getMars (Mars tr bl _) = div[
     style "right" "0",
     style "margin" "auto"
     ] (
-       List.map (getMarsLine tr.x) (toList (initialize tr.x identity))
+       List.map (getMarsLine tr.x) (toList (Array.initialize tr.x identity))
     )
     
 getForm : Model -> Html Msg
 getForm model = div [] [
-    input [ value model.rawInput ] [],
+    input [ value model.rawInput, onInput NewInput ] [],
 
     (case model.input of
-        Error e ->
+        Err e ->
             div [] [text e]
 
-        Valid validInput ->
+        Ok validInput ->
             text ""
     )]
 
@@ -109,10 +141,10 @@ view model =
     div [] [
         getForm model,
         case model.input of
-            Error e ->
+            Err e ->
                 div [] []
 
-            Valid (ValidInput m _) ->
+            Ok (ValidInput m _) ->
                 getMars m
     ]
 

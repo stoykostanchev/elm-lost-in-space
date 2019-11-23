@@ -1,22 +1,36 @@
 module Tests exposing (..)
-
+import String exposing ( split )
 import Test exposing (..)
+import Main exposing(..)
 import Expect
 
-
--- Check out https://package.elm-lang.org/packages/elm-explorations/test/latest to learn more about testing in Elm!
-
-
-all : Test
-all =
-    describe "A Test Suite"
-        [ test "Addition" <|
+validateInputTest : Test
+validateInputTest =
+    describe "Input checks"
+        [ test "Correct parsing of invalid input" <|
             \_ ->
-                Expect.equal 10 (3 + 7)
-        , test "String.left" <|
+                Expect.equal (validateInput "1 ") (Err "Please have the first line as 'A B' where A and B are numbers")
+        , test "Correct parsing of minimal input" <|
             \_ ->
-                Expect.equal "a" (String.left 1 "abcdefg")
-        , test "This test should fail" <|
+                Expect.equal
+                  (parseMars "1 1")
+                  (Ok
+                    ((Mars { x = 1, y = 1 } { x = 0, y = 0 } []),
+                    []))
+        , test "Correct parsing of a single robot" <|
             \_ ->
-                Expect.fail "failed as expected!"
+                Expect.equal
+                  (Ok (ValidInput
+                    (Mars { x = 5, y = 3 } { x = 0, y = 0 } [])
+                    [(
+                        (Robot { x = 1, y = 2 } E),
+                        [ R, L, F ]
+                    )])
+                  )
+                  (validateInput """
+                  5 3
+                  1 2 E
+                  RLF
+                  """)
+
         ]
