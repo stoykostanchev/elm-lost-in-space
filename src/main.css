@@ -30,7 +30,33 @@ img {
 }
 
 textarea {
-  height: 100px;
+  height: 150px;
   width: 50%;
   margin: 30px;
+}
+
+.robot {
+  position: absolute;
+  border: solid 1px pink;
+  background: lightgray;
+  padding: 5px;
+  font-size: 10px;
+}
+
+.orientation { transition: all 1s}
+.orientation--w { transform: translate(0, 14px);  border-radius: 15px 0 0 15px }
+.orientation--n { transform: translate(11px, 0);  border-radius: 15px 15px 0 0 }
+.orientation--s { transform: translate(14px, 24px);  border-radius: 0 0 15px 15px }
+.orientation--e { transform: translate(22px, 14px);  border-radius: 0 15px 15px 0 }
+
+/* .orientation--n { transform: translateY( 5px) }
+.orientation--s { transform: translateY(-5px) }
+.orientation--w { transform: translateY( 5px) } */
+
+.mars-tile {
+  flex: 1;
+  padding: 1px;
+  font-size: 12px;
+  text-align: left;
+  color: darkgrey;
 }

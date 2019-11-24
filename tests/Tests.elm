@@ -2,7 +2,7 @@ module Tests exposing (..)
 import String exposing ( split )
 import Test exposing (..)
 import Main exposing(..)
-import Expect
+import Expect exposing(..)
 
 validateInputTest : Test
 validateInputTest =
@@ -75,3 +75,29 @@ validateInputTest =
                   """)
 
         ]
+
+validateUxLogic : Test
+validateUxLogic =
+    describe "Validate UX Logic"
+        [ test "Should place robot properly spaced" <|
+            \_ ->
+                Expect.within (Absolute (0.000000001))
+                    (getPosInPercentage {x = 5, y = 3} {x = 0, y = 0 }).left
+                    (20.0)
+        ]
+
+
+
+-- 5 3
+-- 1 1 E
+-- RFRFRFRF
+
+-- 3 2 N
+-- FRRFLLFRRFLL
+
+-- 0 3 W
+-- LLFFFLFLFL
+-- ->
+-- 1 1 E
+-- 3 3 N Lost
+-- 2 3 S

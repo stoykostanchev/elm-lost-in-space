@@ -1,7 +1,7 @@
 module Main exposing (..)
 
 import Browser
-import String exposing ( fromInt, concat, split, toInt, trim )
+import String exposing ( fromInt, concat, split, toInt, trim, fromFloat )
 import String.Extra exposing (..)
 import Html exposing (Html, text, div, h1, img, input, p, textarea, button)
 import Html.Attributes exposing (..)
@@ -133,11 +133,24 @@ type alias Model = {
     }
 
 init : ( Model, Cmd Msg )
-init = ({
-        rawInput = "",
-        input = validateInput ""
-        },
-        Cmd.none )
+init =
+    let
+        data = """
+        5 3
+        1 1 E
+        RFRFRFRF
+
+        3 2 N
+        FRRFLLFRRFLL
+
+        0 3 W
+        LLFFFLFLFL
+        """
+    in ({
+        rawInput = data,
+        input = validateInput data
+    },
+    Cmd.none )
 
 step : ValidInput -> (ValidInput, Msg)
 step (ValidInput ((Mars botLeft topRight movedRobots) as m) robsAndInstructs) = case robsAndInstructs of
@@ -183,10 +196,10 @@ robotStep m r i =
 
 blindInstructionFollow : Robot -> Instruction -> Robot
 blindInstructionFollow (Robot c orient) i = case (i, orient) of
-    (F, N) -> Robot { c | y = c.y + 1 } N
-    (F, S) -> Robot { c | y = c.y - 1 } S
-    (F, W) -> Robot { c | x = c.x + 1 } W
-    (F, E) -> Robot { c | x = c.x - 1 } E
+    (F, N) -> Robot { c | y = c.y - 1 } N
+    (F, S) -> Robot { c | y = c.y + 1 } S
+    (F, W) -> Robot { c | x = c.x - 1 } W
+    (F, E) -> Robot { c | x = c.x + 1 } E
     (L, N) -> Robot c E
     (L, S) -> Robot c W
     (L, W) -> Robot c N
@@ -229,33 +242,83 @@ update msg model = case msg of
 
 
 ---- VIEW ----
-getMarsSquare : Int -> Int -> Html msg
-getMarsSquare total n = div [
-    style "background-color" "lightred",
-    style "height" "50px",
-    style "flex-basis" (concat [fromInt (100 // total), "%"]),
-    style "border" "1px orange solid"
-    ] []
+type alias Col = Int
 
-getMarsLine : Int -> Int -> Html msg
-getMarsLine sqCount _ = div [
+type alias MaxCol = Int
+
+type alias Row = Int
+
+getMarsSquare : Row -> MaxCol -> Col -> Html msg
+getMarsSquare r total n = div [
+    style "background-color" "lightred",
+    attribute "class" "mars-tile",
+    style "border" "1px orange solid"
+    ] [text ((fromInt n) ++ "," ++ (fromInt r))]
+
+getMarsLine : MaxCol -> Row -> Int -> Html msg
+getMarsLine sqCount r _ = div [
     style "width" "100%",
     style "display" "flex",
     style "flex-flow" "row wrap"
-    ] (List.map (getMarsSquare sqCount) (toList (Array.initialize sqCount identity)))
+    ] (List.map (getMarsSquare r sqCount) (toList (Array.initialize sqCount identity)))
 
+getOrientationCls : Orientation -> String
+getOrientationCls o =
+    let
+        base = "orientation orientation--"
+    in
+    case o of
+        N -> base ++ "n"
+        S -> base ++ "s"
+        W -> base ++ "w"
+        E -> base ++ "e"
+
+getPosInPercentage : MarsTopRight -> Coord -> { left: Float, top: Float }
+getPosInPercentage tr c =
+    let
+        flTrX = toFloat tr.x
+        flTrY = toFloat tr.y
+        flCX = toFloat c.x
+        flCY = toFloat c.y
+    in
+        {
+            left = (flCX / flTrX ) * 100,
+            top = (flCY  / flTrY ) * 100
+        }
+
+
+getRobot : MarsTopRight -> Int -> Robot -> Html msg
+getRobot tr n (Robot coord orientation) =
+    let
+        pos = getPosInPercentage tr coord 
+    in
+        div [
+            attribute "class" "robot",
+            attribute "class" (getOrientationCls orientation),
+            attribute "class" (fromFloat pos.top),
+            attribute "class" (fromFloat pos.left),
+            style "top" (concat [fromFloat pos.top, "%"]), 
+            style "left" (concat [fromFloat pos.left, "%"]) 
+            ] [ text ( "R-" ++ (fromInt (n + 1)))]
+
+-- tr 5 3
+-- c 1 1 -> top 20% left 33%
+-- c 0 3 -> 
 getMars : Mars -> List Robot -> Html msg
 getMars (Mars tr bl _) lr = div[
-    style "width" "300px",
-    style "height" "300px",
+    style "width" (concat [fromInt (50 * tr.x), "px"]),
+    style "height" (concat [fromInt (50 * tr.y), "px"]),
     style "position" "absolute",
+    style "display" "flex",
+    style "flex-flow" "row wrap",
     style "top" "0",
     style "bottom" "0",
     style "left" "0",
     style "right" "0",
     style "margin" "auto"
     ] (
-       List.map (getMarsLine tr.x) (toList (Array.initialize tr.y identity))
+       List.indexedMap (getMarsLine tr.x) (toList (Array.initialize tr.y identity)) ++
+       List.indexedMap (getRobot tr) lr
     )
     
 getForm : Model -> Html Msg
