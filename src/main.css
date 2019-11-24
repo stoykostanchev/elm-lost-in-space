@@ -29,7 +29,7 @@ img {
   box-sizing: border-box
 }
 
-input {
+textarea {
   height: 100px;
   width: 50%;
   margin: 30px;

@@ -141,18 +141,95 @@ init = ({
         },
         Cmd.none )
 
+step : ValidInput -> (ValidInput, Msg)
+step (ValidInput (Mars botLeft topRight movedRobots) robsAndInstructs) = case robsAndInstructs of
+    [] -> ((ValidInput (Mars botLeft topRight movedRobots) []), End)
+    (r, ins)::xs -> case ins of
+        [] ->
+            let
+                newStaticRobots = movedRobots ++ [Present r]
+                newMars = Mars botLeft topRight newStaticRobots
+                newWs = ValidInput newMars xs
+            in
+                (newWs, None)
+        [i] ->
+            let
+                newStaticRobots = movedRobots ++ [robotStep (Mars botLeft topRight movedRobots) r i]
+                newMars = Mars botLeft topRight newStaticRobots
+                newWs = ValidInput newMars xs
+            in
+                (newWs, None)
+        i::is -> case robotStep (Mars botLeft topRight movedRobots) r i of
+            Lost lr ->
+                let
+                    newStaticRobots = movedRobots ++ [Lost lr]
+                    newMars = Mars botLeft topRight newStaticRobots
+                    newWs = ValidInput newMars xs
+                in
+                    (newWs, None)
+            Present pr ->
+                let
+                    newStaticRobots = movedRobots
+                    newMars = Mars botLeft topRight newStaticRobots
+                    newWs = ValidInput newMars ((r, is)::xs)
+                in
+                    (newWs, None)
 
+robotStep : Mars -> Robot -> Instruction -> MovedRobot
+robotStep m r i =
+    let
+        (Robot newCoords newOrientation) = blindInstructionFollow r i
+    in
+        if (isInMars m newCoords) then
+            Present (Robot newCoords newOrientation)
+        else
+            Lost r
+
+blindInstructionFollow : Robot -> Instruction -> Robot
+blindInstructionFollow (Robot c orient) i = case (i, orient) of
+    (F, N) -> Robot { c | y = c.y + 1 } N
+    (F, S) -> Robot { c | y = c.y - 1 } S
+    (F, W) -> Robot { c | x = c.x + 1 } W
+    (F, E) -> Robot { c | x = c.x - 1 } E
+    (L, N) -> Robot { c | x = c.x - 1 } E
+    (L, S) -> Robot { c | x = c.x + 1 } W
+    (L, W) -> Robot { c | y = c.y + 1 } N
+    (L, E) -> Robot { c | y = c.y - 1 } S
+    (R, N) -> Robot { c | x = c.x + 1 } W
+    (R, S) -> Robot { c | x = c.x + 1 } E
+    (R, W) -> Robot { c | y = c.y + 1 } S
+    (R, E) -> Robot { c | y = c.y - 1 } N
+    (Unknown, _) -> Robot c orient
+
+isInMars : Mars -> Coord -> Bool
+isInMars (Mars tr bl _) c = List.all identity [
+    bl.x < c.x, c.x < tr.x,
+    bl.y < c.y, c.y < tr.y
+    ]
 
 ---- UPDATE ----
 
 
 type Msg
     = NewInput String
+    | TakeStep
+    | End
+    | None
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model = case msg of
     NewInput str -> ( { model | rawInput = str, input = validateInput str }, Cmd.none )
+    TakeStep -> case model.input of
+        Err _ -> (model, Cmd.none)
+        Ok (ValidInput mars instructions) ->
+            let
+                inp = model.input
+                (newWs, _) = step (ValidInput mars instructions)
+            in
+                ({ model | input = Ok newWs }, Cmd.none)
+    End -> (model, Cmd.none)
+    None -> (model, Cmd.none)
 
 
 ---- VIEW ----
@@ -187,7 +264,7 @@ getMars (Mars tr bl _) = div[
     
 getForm : Model -> Html Msg
 getForm model = div [] [
-    input [ value model.rawInput, onInput NewInput ] [],
+    textarea [ value model.rawInput, onInput NewInput ] [],
 
     (case model.input of
         Err e ->
