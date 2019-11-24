@@ -43,15 +43,11 @@ textarea {
   font-size: 10px;
 }
 
-.orientation { transition: all 1s}
-.orientation--w { transform: translate(0, 14px);  border-radius: 15px 0 0 15px }
-.orientation--n { transform: translate(11px, 0);  border-radius: 15px 15px 0 0 }
-.orientation--s { transform: translate(14px, 24px);  border-radius: 0 0 15px 15px }
-.orientation--e { transform: translate(22px, 14px);  border-radius: 0 15px 15px 0 }
-
-/* .orientation--n { transform: translateY( 5px) }
-.orientation--s { transform: translateY(-5px) }
-.orientation--w { transform: translateY( 5px) } */
+.orientation { transition: all 1s; transform: translate(25%, -25%); opacity: 0.7}
+.orientation--w { border-radius: 15px 0 0 15px }
+.orientation--n { border-radius: 15px 15px 0 0 }
+.orientation--s { border-radius: 0 0 15px 15px }
+.orientation--e { border-radius: 0 15px 15px 0 }
 
 .mars-tile {
   flex: 1;

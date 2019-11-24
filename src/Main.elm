@@ -255,12 +255,12 @@ getMarsSquare r total n = div [
     style "border" "1px orange solid"
     ] [text ((fromInt n) ++ "," ++ (fromInt r))]
 
-getMarsLine : MaxCol -> Row -> Int -> Html msg
-getMarsLine sqCount r _ = div [
+getMarsLine : MaxCol -> Row -> Int -> Int -> Html msg
+getMarsLine sqCount r maxR _ = div [
     style "width" "100%",
     style "display" "flex",
     style "flex-flow" "row wrap"
-    ] (List.map (getMarsSquare r sqCount) (toList (Array.initialize sqCount identity)))
+    ] (List.map (getMarsSquare (abs (maxR - r)) sqCount) (toList (Array.initialize sqCount identity)))
 
 getOrientationCls : Orientation -> String
 getOrientationCls o =
@@ -273,17 +273,17 @@ getOrientationCls o =
         W -> base ++ "w"
         E -> base ++ "e"
 
-getPosInPercentage : MarsTopRight -> Coord -> { left: Float, top: Float }
+getPosInPercentage : MarsTopRight -> Coord -> { left: Float, bottom: Float }
 getPosInPercentage tr c =
     let
-        flTrX = toFloat tr.x
-        flTrY = toFloat tr.y
+        flTrX = toFloat (tr.x + 1)
+        flTrY = toFloat (tr.y + 1)
         flCX = toFloat c.x
         flCY = toFloat c.y
     in
         {
             left = (flCX / flTrX ) * 100,
-            top = (flCY  / flTrY ) * 100
+            bottom = (flCY / flTrY ) * 100 -- 0 0 is 100% 0 for css
         }
 
 
@@ -295,9 +295,7 @@ getRobot tr n (Robot coord orientation) =
         div [
             attribute "class" "robot",
             attribute "class" (getOrientationCls orientation),
-            attribute "class" (fromFloat pos.top),
-            attribute "class" (fromFloat pos.left),
-            style "top" (concat [fromFloat pos.top, "%"]), 
+            style "bottom" (concat [fromFloat pos.bottom, "%"]), 
             style "left" (concat [fromFloat pos.left, "%"]) 
             ] [ text ( "R-" ++ (fromInt (n + 1)))]
 
@@ -317,7 +315,7 @@ getMars (Mars tr bl _) lr = div[
     style "right" "0",
     style "margin" "auto"
     ] (
-       List.indexedMap (getMarsLine tr.x) (toList (Array.initialize tr.y identity)) ++
+       List.indexedMap (getMarsLine (tr.x + 1) (tr.y)) (toList (Array.initialize (tr.y + 1) identity)) ++
        List.indexedMap (getRobot tr) lr
     )
     
