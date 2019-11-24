@@ -3,15 +3,13 @@ module Main exposing (..)
 import Browser
 import String exposing ( fromInt, concat, split, toInt, trim )
 import String.Extra exposing (..)
-import Html exposing (Html, text, div, h1, img, input, p, textarea)
+import Html exposing (Html, text, div, h1, img, input, p, textarea, button)
 import Html.Attributes exposing (..)
 import Array exposing (initialize, toList, length)
 import List.Extra exposing (..)
 import Result.Extra exposing (..)
-import Html.Events exposing (onInput)
+import Html.Events exposing (onInput, onClick)
 import Debug exposing (log)
-
-
 
 ---- MODEL ----
 
@@ -142,8 +140,8 @@ init = ({
         Cmd.none )
 
 step : ValidInput -> (ValidInput, Msg)
-step (ValidInput (Mars botLeft topRight movedRobots) robsAndInstructs) = case robsAndInstructs of
-    [] -> ((ValidInput (Mars botLeft topRight movedRobots) []), End)
+step (ValidInput ((Mars botLeft topRight movedRobots) as m) robsAndInstructs) = case robsAndInstructs of
+    [] -> ((ValidInput m []), End)
     (r, ins)::xs -> case ins of
         [] ->
             let
@@ -154,12 +152,12 @@ step (ValidInput (Mars botLeft topRight movedRobots) robsAndInstructs) = case ro
                 (newWs, None)
         [i] ->
             let
-                newStaticRobots = movedRobots ++ [robotStep (Mars botLeft topRight movedRobots) r i]
+                newStaticRobots = movedRobots ++ [robotStep m r i]
                 newMars = Mars botLeft topRight newStaticRobots
                 newWs = ValidInput newMars xs
             in
                 (newWs, None)
-        i::is -> case robotStep (Mars botLeft topRight movedRobots) r i of
+        i::is -> case robotStep m r i of
             Lost lr ->
                 let
                     newStaticRobots = movedRobots ++ [Lost lr]
@@ -169,21 +167,19 @@ step (ValidInput (Mars botLeft topRight movedRobots) robsAndInstructs) = case ro
                     (newWs, None)
             Present pr ->
                 let
-                    newStaticRobots = movedRobots
-                    newMars = Mars botLeft topRight newStaticRobots
-                    newWs = ValidInput newMars ((r, is)::xs)
+                    newWs = ValidInput m ((pr, is)::xs)
                 in
                     (newWs, None)
 
 robotStep : Mars -> Robot -> Instruction -> MovedRobot
 robotStep m r i =
     let
-        (Robot newCoords newOrientation) = blindInstructionFollow r i
+        ((Robot newCoords newOrientation) as newR) = blindInstructionFollow r i
     in
         if (isInMars m newCoords) then
-            Present (Robot newCoords newOrientation)
+            Present newR
         else
-            Lost r
+            Lost newR
 
 blindInstructionFollow : Robot -> Instruction -> Robot
 blindInstructionFollow (Robot c orient) i = case (i, orient) of
@@ -191,20 +187,20 @@ blindInstructionFollow (Robot c orient) i = case (i, orient) of
     (F, S) -> Robot { c | y = c.y - 1 } S
     (F, W) -> Robot { c | x = c.x + 1 } W
     (F, E) -> Robot { c | x = c.x - 1 } E
-    (L, N) -> Robot { c | x = c.x - 1 } E
-    (L, S) -> Robot { c | x = c.x + 1 } W
-    (L, W) -> Robot { c | y = c.y + 1 } N
-    (L, E) -> Robot { c | y = c.y - 1 } S
-    (R, N) -> Robot { c | x = c.x + 1 } W
-    (R, S) -> Robot { c | x = c.x + 1 } E
-    (R, W) -> Robot { c | y = c.y + 1 } S
-    (R, E) -> Robot { c | y = c.y - 1 } N
+    (L, N) -> Robot c E
+    (L, S) -> Robot c W
+    (L, W) -> Robot c N
+    (L, E) -> Robot c S
+    (R, N) -> Robot c W
+    (R, S) -> Robot c E
+    (R, W) -> Robot c S
+    (R, E) -> Robot c N
     (Unknown, _) -> Robot c orient
 
 isInMars : Mars -> Coord -> Bool
 isInMars (Mars tr bl _) c = List.all identity [
-    bl.x < c.x, c.x < tr.x,
-    bl.y < c.y, c.y < tr.y
+    bl.x <= c.x, c.x <= tr.x,
+    bl.y <= c.y, c.y <= tr.y
     ]
 
 ---- UPDATE ----
@@ -248,8 +244,8 @@ getMarsLine sqCount _ = div [
     style "flex-flow" "row wrap"
     ] (List.map (getMarsSquare sqCount) (toList (Array.initialize sqCount identity)))
 
-getMars : Mars -> Html msg
-getMars (Mars tr bl _) = div[
+getMars : Mars -> List Robot -> Html msg
+getMars (Mars tr bl _) lr = div[
     style "width" "300px",
     style "height" "300px",
     style "position" "absolute",
@@ -259,7 +255,7 @@ getMars (Mars tr bl _) = div[
     style "right" "0",
     style "margin" "auto"
     ] (
-       List.map (getMarsLine tr.x) (toList (Array.initialize tr.x identity))
+       List.map (getMarsLine tr.x) (toList (Array.initialize tr.y identity))
     )
     
 getForm : Model -> Html Msg
@@ -272,7 +268,9 @@ getForm model = div [] [
 
         Ok validInput ->
             text ""
-    )]
+    ),
+    button [onClick TakeStep ] [ text "Step" ]
+    ]
 
 view : Model -> Html Msg
 view model =
@@ -282,8 +280,10 @@ view model =
             Err e ->
                 div [] []
 
-            Ok (ValidInput m _) ->
-                getMars m
+            Ok (ValidInput m r) ->
+                div [] [
+                    getMars m (List.map (\(rob, ins) -> rob) r)
+                ]
     ]
 
 ---- PROGRAM ----
