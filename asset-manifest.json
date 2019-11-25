@@ -1,0 +1,15 @@
+{
+  "main.css": "/elm-lost-in-space/static/css/main.7c47601a.chunk.css",
+  "main.js": "/elm-lost-in-space/static/js/main.3296516f.chunk.js",
+  "main.js.map": "/elm-lost-in-space/static/js/main.3296516f.chunk.js.map",
+  "runtime~main.js": "/elm-lost-in-space/static/js/runtime~main.8ad43a48.js",
+  "runtime~main.js.map": "/elm-lost-in-space/static/js/runtime~main.8ad43a48.js.map",
+  "vendors~main.js": "/elm-lost-in-space/static/js/vendors~main.3ca81432.chunk.js",
+  "vendors~main.js.map": "/elm-lost-in-space/static/js/vendors~main.3ca81432.chunk.js.map",
+  "./service-worker.js": "/elm-lost-in-space/./service-worker.js",
+  "favicon.ico": "/elm-lost-in-space/favicon.ico",
+  "index.html": "/elm-lost-in-space/index.html",
+  "logo.svg": "/elm-lost-in-space/logo.svg",
+  "manifest.json": "/elm-lost-in-space/manifest.json",
+  "precache-manifest.f85ff985e8aa0cb589b829210df67c0f.js": "/elm-lost-in-space/precache-manifest.f85ff985e8aa0cb589b829210df67c0f.js"
+}
