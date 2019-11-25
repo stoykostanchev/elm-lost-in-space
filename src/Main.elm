@@ -20,7 +20,7 @@ type alias Coord = {
     }
 type Orientation = E | W | S | N
 type Robot = Robot Coord Orientation
-type MovedRobot = Lost Robot | Present Robot
+type MovedRobot = Lost Robot Instruction | Present Robot
 type alias MarsTopRight = Coord
 type alias MarsBottomLeft = Coord
 type Mars = Mars MarsTopRight MarsBottomLeft (List MovedRobot)
@@ -172,9 +172,9 @@ step (ValidInput ((Mars botLeft topRight movedRobots) as m) robsAndInstructs) = 
             in
                 (newWs, None)
         i::is -> case robotStep m r i of
-            Lost lr ->
+            Lost lr lostInstruction ->
                 let
-                    newStaticRobots = movedRobots ++ [Lost lr]
+                    newStaticRobots = movedRobots ++ [Lost lr lostInstruction]
                     newMars = Mars botLeft topRight newStaticRobots
                     newWs = ValidInput newMars xs
                 in
@@ -186,14 +186,30 @@ step (ValidInput ((Mars botLeft topRight movedRobots) as m) robsAndInstructs) = 
                     (newWs, None)
 
 robotStep : Mars -> Robot -> Instruction -> MovedRobot
-robotStep m r i =
+robotStep ((Mars _ _ mr) as m) r i =
     let
         ((Robot newCoords newOrientation) as newR) = blindInstructionFollow r i
     in
         if (isInMars m newCoords) then
             Present newR
         else
-            Lost r
+            if someoneGotLostHereBefore mr r i then
+                Present r
+            else
+                Lost r i
+
+
+someoneGotLostHereBefore : List MovedRobot -> Robot -> Instruction -> Bool
+someoneGotLostHereBefore lmr ((Robot { x, y } curRobotOr) as r) ii = case lmr of
+    [] -> False
+    head::tail -> case head of
+        Lost (Robot prevRobotCoord o) prevRobotInstr ->
+            if List.all identity [x == prevRobotCoord.x, y == prevRobotCoord.y, prevRobotInstr == ii, o == curRobotOr ] then
+                True
+            else
+                someoneGotLostHereBefore tail r ii
+        Present _ ->
+                someoneGotLostHereBefore tail r ii
 
 blindInstructionFollow : Robot -> Instruction -> Robot
 blindInstructionFollow (Robot c orient) i = case (i, orient) of
@@ -307,7 +323,7 @@ getRobot attr tr n (Robot coord orientation) =
 getStoppedRobot : MarsTopRight -> Int -> MovedRobot -> Html msg
 getStoppedRobot tr n mr =
     case mr of
-        Lost r -> getRobot [
+        Lost r _ -> getRobot [
             attribute "class" "robot--lost"] tr n r
         Present r -> getRobot [
             attribute "class" "robot--stopped"] tr n r
