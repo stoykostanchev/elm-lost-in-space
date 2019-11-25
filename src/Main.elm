@@ -2,15 +2,15 @@ module Main exposing (..)
 
 import Html.Keyed as Keyed
 import Browser
+import Task
 import String exposing ( fromInt, concat, split, toInt, trim, fromFloat )
 import String.Extra exposing (..)
-import Html exposing (Html, text, div, h1, img, input, p, textarea, button)
+import Html exposing (Html, text, div, h1, img, input, p, textarea, button, pre)
 import Html.Attributes exposing (..)
 import Array exposing (initialize, toList, length)
 import List.Extra exposing (..)
 import Result.Extra exposing (..)
 import Html.Events exposing (onInput, onClick)
-import Debug exposing (log)
 
 ---- MODEL ----
 
@@ -130,7 +130,8 @@ validateInput s = case parseMars s of
 -- type alias Input = Result ParseError ValidInput
 type alias Model = {
     rawInput: String,
-    input: Input
+    input: Input,
+    output: String
     }
 
 init : ( Model, Cmd Msg )
@@ -149,13 +150,14 @@ init =
         """
     in ({
         rawInput = data,
-        input = validateInput data
+        input = validateInput data,
+        output = ""
     },
     Cmd.none )
 
-step : ValidInput -> (ValidInput, Msg)
+step : ValidInput -> (ValidInput, Cmd Msg)
 step (ValidInput ((Mars botLeft topRight movedRobots) as m) robsAndInstructs) = case robsAndInstructs of
-    [] -> ((ValidInput m []), End)
+    [] -> ((ValidInput m []), Task.succeed End |> Task.perform identity)
     (r, ins)::xs -> case ins of
         [] ->
             let
@@ -163,14 +165,14 @@ step (ValidInput ((Mars botLeft topRight movedRobots) as m) robsAndInstructs) = 
                 newMars = Mars botLeft topRight newStaticRobots
                 newWs = ValidInput newMars xs
             in
-                (newWs, None)
+                (newWs, Cmd.none)
         [i] ->
             let
                 newStaticRobots = movedRobots ++ [robotStep m r i]
                 newMars = Mars botLeft topRight newStaticRobots
                 newWs = ValidInput newMars xs
             in
-                (newWs, None)
+                (newWs, Cmd.none)
         i::is -> case robotStep m r i of
             Lost lr lostInstruction ->
                 let
@@ -178,12 +180,12 @@ step (ValidInput ((Mars botLeft topRight movedRobots) as m) robsAndInstructs) = 
                     newMars = Mars botLeft topRight newStaticRobots
                     newWs = ValidInput newMars xs
                 in
-                    (newWs, None)
+                    (newWs, Cmd.none)
             Present pr ->
                 let
                     newWs = ValidInput m ((pr, is)::xs)
                 in
-                    (newWs, None)
+                    (newWs, Cmd.none)
 
 robotStep : Mars -> Robot -> Instruction -> MovedRobot
 robotStep ((Mars _ _ mr) as m) r i =
@@ -241,6 +243,8 @@ type Msg
     | TakeStep
     | End
     | None
+    | Reset
+    | StepToTheEnd
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -251,10 +255,25 @@ update msg model = case msg of
         Ok (ValidInput mars instructions) ->
             let
                 inp = model.input
-                (newWs, _) = step (ValidInput mars instructions)
+                (newWs, cmd) = step (ValidInput mars instructions)
             in
-                ({ model | input = Ok newWs }, Cmd.none)
-    End -> (model, Cmd.none)
+                ({ model | input = Ok newWs }, cmd)
+    End -> case model.input of
+        Err _ -> (model, Cmd.none)
+        Ok (ValidInput mars instructions) -> ({ model | output = getOutput mars }, Cmd.none)
+    Reset -> ({
+        rawInput = model.rawInput,
+        input = validateInput model.rawInput,
+        output = ""
+        }, Cmd.none)
+    StepToTheEnd ->
+        let
+            (newModel, cmd) = update TakeStep model
+        in
+            if cmd == Cmd.none then
+                update StepToTheEnd newModel
+            else
+                (newModel, cmd)
     None -> (model, Cmd.none)
 
 
@@ -357,9 +376,26 @@ getForm model = div [] [
 
         Ok validInput ->
             text ""
-    ),
-    button [onClick TakeStep ] [ text "Step" ]
+    )
     ]
+
+orientationToLetter : Orientation -> String
+orientationToLetter o = case o of
+    N -> "N"
+    W -> "W"
+    E -> "E"
+    S -> "S"
+
+printRobot : Robot -> String
+printRobot (Robot coord o) = fromInt coord.x ++ " " ++ fromInt coord.y ++ " " ++orientationToLetter o ++ "\n"
+
+printMovedRobot : MovedRobot -> String
+printMovedRobot mr = case mr of
+    Present r -> printRobot r
+    Lost r _ -> printRobot r
+
+getOutput : Mars -> String
+getOutput (Mars _ _ movedRobots) = concat <| List.map printMovedRobot movedRobots
 
 view : Model -> Html Msg
 view model =
@@ -371,7 +407,15 @@ view model =
 
             Ok (ValidInput m r) ->
                 div [] [
-                    getMars m (List.map (\(rob, ins) -> rob) r)
+                    getMars m (List.map (\(rob, ins) -> rob) r),
+                    case model.output of
+                        "" -> div [] [
+                            button [onClick TakeStep ] [ text "Step" ],
+                            button [onClick StepToTheEnd ] [ text "Just show results" ]]
+                        output -> button [onClick Reset] [ text "Reset" ],
+                    case model.output of
+                        "" -> div [] []
+                        output -> pre [ attribute "class" "output" ] [ text model.output ]
                 ]
     ]
 
