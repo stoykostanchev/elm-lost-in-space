@@ -43,7 +43,8 @@ textarea {
   font-size: 10px;
 }
 
-.orientation { transition: all 1s; transform: translate(25%, -25%); opacity: 0.7}
+/* .orientation { transition: all 1s; transform: translate(25%, -25%); opacity: 0.7} */
+.orientation { transform: translate(25%, -25%); opacity: 0.7}
 .orientation--w { border-radius: 15px 0 0 15px }
 .orientation--n { border-radius: 15px 15px 0 0 }
 .orientation--s { border-radius: 0 0 15px 15px }
@@ -55,4 +56,13 @@ textarea {
   font-size: 12px;
   text-align: left;
   color: darkgrey;
+}
+
+.robot--lost {
+  opacity: 0.4;
+  background-color: pink;
+}
+.robot--stopped {
+  opacity: 0.4;
+  background-color: purple;
 }

@@ -1,5 +1,6 @@
 module Main exposing (..)
 
+import Html.Keyed as Keyed
 import Browser
 import String exposing ( fromInt, concat, split, toInt, trim, fromFloat )
 import String.Extra exposing (..)
@@ -141,7 +142,7 @@ init =
         RFRFRFRF
 
         3 2 N
-        FRRFLLFRRFLL
+        FRRFLLFFRRFLL
 
         0 3 W
         LLFFFLFLFL
@@ -192,22 +193,22 @@ robotStep m r i =
         if (isInMars m newCoords) then
             Present newR
         else
-            Lost newR
+            Lost r
 
 blindInstructionFollow : Robot -> Instruction -> Robot
 blindInstructionFollow (Robot c orient) i = case (i, orient) of
-    (F, N) -> Robot { c | y = c.y - 1 } N
-    (F, S) -> Robot { c | y = c.y + 1 } S
+    (F, N) -> Robot { c | y = c.y + 1 } N
+    (F, S) -> Robot { c | y = c.y - 1 } S
     (F, W) -> Robot { c | x = c.x - 1 } W
     (F, E) -> Robot { c | x = c.x + 1 } E
-    (L, N) -> Robot c E
-    (L, S) -> Robot c W
-    (L, W) -> Robot c N
-    (L, E) -> Robot c S
-    (R, N) -> Robot c W
-    (R, S) -> Robot c E
-    (R, W) -> Robot c S
-    (R, E) -> Robot c N
+    (L, N) -> Robot c W
+    (L, S) -> Robot c E
+    (L, W) -> Robot c S
+    (L, E) -> Robot c N
+    (R, N) -> Robot c E
+    (R, S) -> Robot c W
+    (R, W) -> Robot c N
+    (R, E) -> Robot c S
     (Unknown, _) -> Robot c orient
 
 isInMars : Mars -> Coord -> Bool
@@ -287,23 +288,33 @@ getPosInPercentage tr c =
         }
 
 
-getRobot : MarsTopRight -> Int -> Robot -> Html msg
-getRobot tr n (Robot coord orientation) =
+getRobot : List (Html.Attribute msg) -> MarsTopRight -> Int -> Robot -> Html msg
+getRobot attr tr n (Robot coord orientation) =
     let
         pos = getPosInPercentage tr coord 
     in
-        div [
+        Keyed.node "div" ([
             attribute "class" "robot",
             attribute "class" (getOrientationCls orientation),
             style "bottom" (concat [fromFloat pos.bottom, "%"]), 
             style "left" (concat [fromFloat pos.left, "%"]) 
-            ] [ text ( "R-" ++ (fromInt (n + 1)))]
+            ]++attr) [(
+                (fromInt coord.x),
+                ( text ( "R-" ++ (fromInt (n + 1))))
+            )]
 
--- tr 5 3
--- c 1 1 -> top 20% left 33%
--- c 0 3 -> 
+
+getStoppedRobot : MarsTopRight -> Int -> MovedRobot -> Html msg
+getStoppedRobot tr n mr =
+    case mr of
+        Lost r -> getRobot [
+            attribute "class" "robot--lost"] tr n r
+        Present r -> getRobot [
+            attribute "class" "robot--stopped"] tr n r
+
+
 getMars : Mars -> List Robot -> Html msg
-getMars (Mars tr bl _) lr = div[
+getMars (Mars tr bl mrs) lr = div[
     style "width" (concat [fromInt (50 * tr.x), "px"]),
     style "height" (concat [fromInt (50 * tr.y), "px"]),
     style "position" "absolute",
@@ -316,7 +327,8 @@ getMars (Mars tr bl _) lr = div[
     style "margin" "auto"
     ] (
        List.indexedMap (getMarsLine (tr.x + 1) (tr.y)) (toList (Array.initialize (tr.y + 1) identity)) ++
-       List.indexedMap (getRobot tr) lr
+       List.indexedMap (getRobot [] tr) lr ++
+       List.indexedMap (getStoppedRobot tr) mrs
     )
     
 getForm : Model -> Html Msg
