@@ -387,12 +387,12 @@ orientationToLetter o = case o of
     S -> "S"
 
 printRobot : Robot -> String
-printRobot (Robot coord o) = fromInt coord.x ++ " " ++ fromInt coord.y ++ " " ++orientationToLetter o ++ "\n"
+printRobot (Robot coord o) = fromInt coord.x ++ " " ++ fromInt coord.y ++ " " ++orientationToLetter o
 
 printMovedRobot : MovedRobot -> String
 printMovedRobot mr = case mr of
-    Present r -> printRobot r
-    Lost r _ -> printRobot r
+    Present r -> printRobot r ++"      \n"
+    Lost r _ -> printRobot r ++ " LOST \n"
 
 getOutput : Mars -> String
 getOutput (Mars _ _ movedRobots) = concat <| List.map printMovedRobot movedRobots

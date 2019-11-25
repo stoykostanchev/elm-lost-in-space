@@ -73,8 +73,8 @@ textarea {
   position: absolute;
   top: 0;
   font-weight: bold;
-  background-color: lightgray;
-  opacity: 0.5;
+  background-color: #eaeaea;
+  opacity: 0.6;
   z-index: 2;
   bottom: 0;
   left: 0;
@@ -83,4 +83,6 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
+  color: black;
+  padding-left: 30px;
 }
